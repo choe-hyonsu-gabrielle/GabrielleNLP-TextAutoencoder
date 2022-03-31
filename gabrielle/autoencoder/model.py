@@ -7,7 +7,7 @@ from tensorflow.keras.layers import Embedding, Bidirectional, GRU, Concatenate, 
 @dataclasses.dataclass
 class TextAutoConfig:
     EMBEDDING_DIM = 512
-    HIDDEN_SIZE = 256
+    HIDDEN_SIZE = 512
 
 
 class SharedEmbedding(layers.Layer):
@@ -22,9 +22,9 @@ class SharedEmbedding(layers.Layer):
         return embedded
 
 
-class TextAutoEncoder(layers.Layer):
+class AETextEncoder(layers.Layer):
     def __init__(self, embedding_dim=TextAutoConfig.EMBEDDING_DIM, hidden_size=TextAutoConfig.HIDDEN_SIZE):
-        super(TextAutoEncoder, self).__init__(name=self.__class__.__name__)
+        super(AETextEncoder, self).__init__(name=self.__class__.__name__)
         self.embedding_dim = embedding_dim
         self.hidden_size = hidden_size
         self.gru_head = Bidirectional(GRU(embedding_dim//2, return_sequences=True, dropout=0.2))
@@ -38,9 +38,9 @@ class TextAutoEncoder(layers.Layer):
         return encoder_final_state
 
 
-class TextAutoDecoder(layers.Layer):
+class AETextDecoder(layers.Layer):
     def __init__(self, vocab_size, hidden_size=TextAutoConfig.HIDDEN_SIZE):
-        super(TextAutoDecoder, self).__init__(name=self.__class__.__name__)
+        super(AETextDecoder, self).__init__(name=self.__class__.__name__)
         self.hidden_size = hidden_size
         self.vocab_size = vocab_size
         self.gru_head = GRU(self.hidden_size, return_sequences=True)
@@ -57,8 +57,8 @@ def get_autoencoder_model(max_length, vocab_size):
     encoder_input = Input(shape=(max_length,), dtype='int32')
     decoder_input = Input(shape=(max_length,), dtype='int32')
     shared_embedder = SharedEmbedding(vocab_size=vocab_size)
-    encoder = TextAutoEncoder()
-    decoder = TextAutoDecoder(vocab_size=vocab_size)
+    encoder = AETextEncoder()
+    decoder = AETextDecoder(vocab_size=vocab_size)
 
     encoder_embedding = shared_embedder(encoder_input)
     encoder_final_state = encoder(encoder_embedding)
