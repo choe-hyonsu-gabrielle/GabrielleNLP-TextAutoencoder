@@ -6,15 +6,15 @@ from soyclustering import SphericalKMeans
 from soyclustering import merge_close_clusters
 from numpy import dot
 from numpy.linalg import norm
+from scipy.sparse import csr_matrix
 
 
 def cos_sim(a, b):
-    similarity = dot(a, b) / (norm(a) * norm(b))
-    return similarity.tolist()[0][0]
+    return dot(a, b) / (norm(a) * norm(b))
 
 
 class AESphericalKMeansClustering:
-    def __init__(self, texts: list, n_clusters=100, max_iter=200):
+    def __init__(self, texts: list, n_clusters=100, max_iter=15):
         self.texts = list(set(texts))
         if len(texts) != len(self.texts):
             print(f"Got {len(texts)} texts but {len(self.texts)} unique data loaded.")
@@ -32,9 +32,9 @@ class AESphericalKMeansClustering:
         self.cluster_ids = None
         self.cluster_centers = None
 
-    def run(self, merge_clusters=True):
-        self.features = self._get_text_features
-        self.cluster_ids = self.clustering.fit_predict(self.features)
+    def run(self, merge_clusters=False):
+        self.features = self._get_text_features()
+        self.cluster_ids = self.clustering.fit_predict(csr_matrix(self.features))
         self.cluster_centers = self.clustering.cluster_centers_
         if merge_clusters:
             print(f"Initial n_clusters={len(self.cluster_centers)}...", end=' ')
@@ -44,7 +44,8 @@ class AESphericalKMeansClustering:
     def _get_text_features(self):
         tokenized = [x for x in self.tokenizer.encode(self.texts)]
         padded = pad_sequences(sequences=tokenized, maxlen=TextAutoConfig.MAX_LENGTH, padding='post')
-        return self.autoencoder.predict(padded, batch_size=64, verbose=1).numpy()
+        ndarray_vectors = self.autoencoder.predict(padded, batch_size=64, verbose=1)
+        return ndarray_vectors
 
     def _merge_clusters(self):
         self.cluster_centers, self.cluster_ids = merge_close_clusters(
