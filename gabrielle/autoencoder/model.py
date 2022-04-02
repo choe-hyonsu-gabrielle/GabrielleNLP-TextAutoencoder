@@ -1,13 +1,8 @@
-import dataclasses
+from config import TextAutoConfig
 from tensorflow.keras import Model
 from tensorflow.keras import layers
-from tensorflow.keras.layers import Embedding, Bidirectional, GRU, Concatenate, Dense, TimeDistributed, Input
-
-
-@dataclasses.dataclass
-class TextAutoConfig:
-    EMBEDDING_DIM = 512
-    HIDDEN_SIZE = 512
+from tensorflow.keras.models import load_model
+from tensorflow.keras.layers import Input, Embedding, Bidirectional, GRU, Concatenate, TimeDistributed, Dense
 
 
 class SharedEmbedding(layers.Layer):
@@ -65,10 +60,19 @@ def get_autoencoder_model(max_length, vocab_size):
     decoder_embedding = shared_embedder(decoder_input)
     decoder_output = decoder([decoder_embedding, encoder_final_state])
 
-    model = Model(inputs=[encoder_input, decoder_input], outputs=decoder_output)
-    model.summary()
-    model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['acc'])
-    return model
+    model_ = Model(inputs=[encoder_input, decoder_input], outputs=decoder_output)
+    model_.summary()
+    model_.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['acc'])
+    return model_
+
+
+def get_trained_encoder(saved_model):
+    loaded_model = load_model(saved_model)
+    ae_input = loaded_model.input[0]
+    ae_embedding = loaded_model.get_layer('SharedEmbedding')(ae_input)
+    ae_encoder_state = loaded_model.get_layer('AETextEncoder')(ae_embedding)
+    ae_model = Model(inputs=ae_input, outputs=ae_encoder_state)
+    return ae_model
 
 
 if __name__ == '__main__':
